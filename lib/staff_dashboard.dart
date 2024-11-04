@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'login_page.dart'; // Import your login page here
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login_page.dart';
 
 class StaffDashboard extends StatefulWidget {
   @override
@@ -9,14 +8,9 @@ class StaffDashboard extends StatefulWidget {
 }
 
 class _StaffDashboardState extends State<StaffDashboard> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final List<String> attendanceStatus = ['Present', 'Absent'];
-  Map<String, String> attendanceRecords = {}; // to hold attendance records
-
-  // Logout function
+  // Method to log out
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    // Navigate back to the login page after logging out
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
@@ -27,94 +21,157 @@ class _StaffDashboardState extends State<StaffDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Staff Dashboard'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () => logout(context), // Call the logout function
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
           children: [
-            Text('Mark Attendance', style: TextStyle(fontSize: 24)),
-            Expanded(child: _buildStudentList()),
-            ElevatedButton(
-              onPressed: _submitAttendance,
-              child: Text('Submit Attendance'),
+            // Staff profile picture and information
+            CircleAvatar(
+              backgroundImage: AssetImage('assets/main.png'), // Replace with staff image path
+              radius: 25,
+            ),
+            SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'John Doe', // Replace with staff name
+                  style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Position: Teacher', // Replace with position
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            Spacer(),
+            // Notification icon
+            IconButton(
+              icon: Icon(Icons.notifications, color: Colors.black),
+              onPressed: () {
+                // Handle notification action
+              },
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStudentList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('students').snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        var students = snapshot.data!.docs;
-
-        return ListView.builder(
-          itemCount: students.length,
-          itemBuilder: (context, index) {
-            var student = students[index];
-            var studentId = student.id;
-
-            return ListTile(
-              title: Text(student['name']),
-              trailing: DropdownButton<String>(
-                value: attendanceRecords[studentId],
-                hint: Text('Select'),
-                items: attendanceStatus.map((String status) {
-                  return DropdownMenuItem<String>(
-                    value: status,
-                    child: Text(status),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    attendanceRecords[studentId] = newValue!;
-                  });
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search box
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[200],
+              ),
+            ),
+            SizedBox(height: 20),
+            // Class, Subject, and Time Table Section
+            Text('Quick Access', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildQuickAccessContainer('Class'),
+                _buildQuickAccessContainer('Subject'),
+                _buildQuickAccessContainer('Time Table'),
+              ],
+            ),
+            SizedBox(height: 20),
+            // Buttons for Report, Notes, Announcements
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildFeatureButton('Report'),
+                _buildFeatureButton('Notes'),
+                _buildFeatureButton('Announcements'),
+              ],
+            ),
+            SizedBox(height: 20),
+            // Recent Updates Section
+            Text('Recent Updates', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: 5, // Replace with the number of recent updates
+                itemBuilder: (context, index) {
+                  return _buildUpdateItem('Update ${index + 1}', 'Details of the update...');
                 },
               ),
-            );
-          },
-        );
-      },
+            ),
+          ],
+        ),
+      ),
+      // Bottom Navigation Bar
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.check_box), label: 'Attendance'),
+          BottomNavigationBarItem(icon: Icon(Icons.request_page), label: 'Requests'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+      ),
     );
   }
 
-  Future<void> _submitAttendance() async {
-    DateTime now = DateTime.now();
-    String date = "${now.year}-${now.month}-${now.day}";
-
-    // Loop through attendance records and save to Firestore
-    for (var entry in attendanceRecords.entries) {
-      String studentId = entry.key;
-      String status = entry.value;
-
-      await _firestore.collection('students')
-          .doc(studentId)
-          .collection('attendance')
-          .doc(date)
-          .set({'status': status});
-    }
-
-    // Show a success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Attendance marked successfully!')),
+  // Helper method to create Quick Access containers
+  Widget _buildQuickAccessContainer(String title) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.folder, size: 40, color: Colors.blue), // Adjust icons as needed
+          SizedBox(height: 10),
+          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
+  }
 
-    // Clear attendance records after submission
-    setState(() {
-      attendanceRecords.clear();
-    });
+  // Helper method to create feature buttons
+  Widget _buildFeatureButton(String title) {
+    return ElevatedButton(
+      onPressed: () {
+        // Handle feature button action
+      },
+      child: Text(title),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      ),
+    );
+  }
+
+  // Helper method to create update items in Recent Updates section
+  Widget _buildUpdateItem(String title, String details) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 4, spreadRadius: 1)],
+      ),
+      child: ListTile(
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(details),
+      ),
+    );
   }
 }

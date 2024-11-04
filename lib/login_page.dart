@@ -6,8 +6,7 @@ import 'package:college_app/vice_principal_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'hod_dashboard.dart';
-import 'home_page.dart';
-import 'signup_page.dart'; // Import the SignupPage
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -18,13 +17,12 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  String? selectedRole; // Variable to hold selected role
+  String? selectedRole;
 
   Future<void> _login() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    // Basic input validation
     if (email.isEmpty || password.isEmpty || selectedRole == null) {
       _showError('Please enter both email, password, and select a role.');
       return;
@@ -36,24 +34,14 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      // Fetch user role from Firestore
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
 
-      // Check if the user document exists and contains the role
       if (userDoc.exists) {
         Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
 
-        // Debug log for user data
-        print('User Data: $userData');
-
-        // Ensure the user role matches the selected role
         if (userData.containsKey('role')) {
           String role = userData['role'];
-          print('Fetched role from Firestore: $role');
-          print('Selected role: $selectedRole');
-
           if (role == selectedRole) {
-            // Navigate to the respective dashboard based on the role
             switch (role) {
               case 'Principal':
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PrincipalDashboard()));
@@ -95,51 +83,123 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Log In')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+      body: Center(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20.0),
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        'assets/nscet.png',
+                        height: 100,
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Email', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      TextField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your email',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      SizedBox(height: 15),
+                      Text('Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      TextField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your password',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        obscureText: true,
+                      ),
+                      SizedBox(height: 15),
+                      Text('Role', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      DropdownButtonFormField<String>(
+                        value: selectedRole,
+                        items: <String>['Principal', 'Vice Principal', 'HoD', 'Staff', 'Student']
+                            .map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedRole = newValue;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            // Add Forgot Password Functionality
+                          },
+                          child: Text('Forgot Password?', style: TextStyle(color: Colors.blue)),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            backgroundColor: Color(0xFF3498DB), // New background color
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Log In',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => SignUpPage()));
+                          },
+                          child: Text("Don't have an account? Sign Up", style: TextStyle(color: Colors.grey[700])),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              value: selectedRole,
-              items: <String>['Principal', 'Vice Principal', 'HoD', 'Staff', 'Student']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedRole = newValue;
-                });
-              },
-              decoration: InputDecoration(labelText: 'Select Role'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _login,
-              child: Text('Log In'),
-            ),
-            SizedBox(height: 20),
-            TextButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => SignUpPage()));
-              },
-              child: Text("Don't have an account? Sign Up"),
-            ),
-          ],
+          ),
         ),
       ),
     );
